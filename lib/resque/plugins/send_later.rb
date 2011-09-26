@@ -39,11 +39,13 @@ module Resque
         @queue = :method
 
         def self.perform(klass, object_id, method, *args)
-          if object_id.nil? # class method delay
-            klass.constantize.send(method, *args)
-          else
-            model = klass.constantize.send(:find, object_id)
-            model.send(method, *args)
+          ActiveSupport::Notifications.instrument("perform.resque-send-later", :method_info=>[klass, object_id, method, *args].to_json) do
+            if object_id.nil? # class method delay
+              klass.constantize.send(method, *args)
+            else
+              model = klass.constantize.send(:find, object_id)
+              model.send(method, *args)
+            end
           end
         end
 
